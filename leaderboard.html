@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Leaderboard</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+<style>
+body{font-family:Orbitron;background:#030712;color:white}
+</style>
+</head>
+
+<body class="p-10">
+
+<h1 class="text-3xl text-center text-yellow-400 mb-6">
+Leaderboard
+</h1>
+
+<table class="w-full text-center">
+
+<thead>
+<tr class="bg-gray-800">
+<th>Rank</th>
+<th>Name</th>
+<th>Points</th>
+</tr>
+</thead>
+
+<tbody id="board"></tbody>
+
+</table>
+
+<script src="js/leaderboard.js"></script>
+
+</body>
+</html>

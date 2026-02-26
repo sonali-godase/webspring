@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Royal Deception Arena</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;900&display=swap" rel="stylesheet">
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Orbitron',sans-serif}
+
+body{
+background:radial-gradient(circle,#2a0000,#000);
+color:white;
+text-align:center;
+min-height:100vh;
+}
+
+h1{
+margin-top:20px;
+color:#ff2e63;
+text-shadow:0 0 25px #ff2e63;
+}
+
+input{
+padding:8px;
+border-radius:10px;
+border:none;
+margin-top:10px;
+}
+
+button{
+padding:10px 20px;
+border:none;
+border-radius:20px;
+background:#ff2e63;
+color:white;
+cursor:pointer;
+margin-top:15px;
+transition:0.3s;
+}
+button:hover{
+background:#ff004c;
+box-shadow:0 0 15px #ff2e63;
+}
+
+#countdown{
+margin-top:15px;
+font-size:1.4rem;
+color:#ff4444;
+min-height:30px;
+}
+
+#gameArea{
+margin-top:30px;
+display:flex;
+justify-content:center;
+gap:20px;
+flex-wrap:wrap;
+}
+
+.card{
+width:140px;
+height:190px;
+perspective:1000px;
+cursor:pointer;
+}
+
+.inner{
+width:100%;
+height:100%;
+position:relative;
+transition:transform 0.5s;
+transform-style:preserve-3d;
+}
+
+.flipped{
+transform:rotateY(180deg);
+}
+
+.front,.back{
+position:absolute;
+width:100%;
+height:100%;
+border-radius:15px;
+display:flex;
+flex-direction:column;
+justify-content:center;
+align-items:center;
+font-size:1rem;
+backface-visibility:hidden;
+border:2px solid #ff2e63;
+}
+
+.front{ background:#111; }
+
+.back{
+transform:rotateY(180deg);
+color:white;
+font-weight:bold;
+}
+
+.back img{
+width:60px;
+margin-bottom:10px;
+}
+
+.police{background:#0066ff;}
+.chor{background:#aa0000;}
+.raja{background:#ffaa00;}
+.rani{background:#cc33ff;}
+
+#result{
+margin-top:20px;
+font-size:1.3rem;
+min-height:40px;
+}
+
+#scoreBoard{
+margin-top:15px;
+}
+</style>
+</head>
+
+<body>
+
+<h1>ROYAL DECEPTION ARENA</h1>
+
+<input type="text" id="playerName" placeholder="Enter Your Name">
+<br>
+<button onclick="startGame()">Start Game</button>
+
+<div id="countdown"></div>
+<div id="gameArea"></div>
+<div id="result"></div>
+<div id="scoreBoard"></div>
+<button id="restartBtn" onclick="startGame()" style="display:none;">Play Again</button>
+
+<script>
+let roles=["Raja","Rani","Police","Chor"];
+let players=[];
+let userIndex=0;
+let playerName="";
+let gameActive=false;
+let countdownInterval;
+let audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+const gameArea=document.getElementById("gameArea");
+const result=document.getElementById("result");
+const scoreBoard=document.getElementById("scoreBoard");
+const restartBtn=document.getElementById("restartBtn");
+const countdownDiv=document.getElementById("countdown");
+
+function shuffle(array){
+return array.sort(()=>Math.random()-0.5);
+}
+
+function startGame(){
+playerName=document.getElementById("playerName").value.trim();
+if(playerName===""){alert("Enter your name!");return;}
+
+audioCtx.resume();
+
+gameActive=true;
+restartBtn.style.display="none";
+result.innerHTML="";
+scoreBoard.innerHTML="";
+countdownDiv.innerHTML="";
+gameArea.innerHTML="";
+
+players=shuffle([...roles]);
+
+for(let i=0;i<4;i++){
+let card=document.createElement("div");
+card.className="card";
+
+let inner=document.createElement("div");
+inner.className="inner";
+
+let front=document.createElement("div");
+front.className="front";
+front.innerText=(i===0)?playerName:"AI "+i;
+
+let back=document.createElement("div");
+back.className="back "+players[i].toLowerCase();
+
+let img=document.createElement("img");
+
+if(players[i]==="Police") img.src="https://cdn-icons-png.flaticon.com/512/3135/3135715.png";
+if(players[i]==="Chor") img.src="https://cdn-icons-png.flaticon.com/512/3063/3063825.png";
+if(players[i]==="Raja") img.src="https://cdn-icons-png.flaticon.com/512/616/616490.png";
+if(players[i]==="Rani") img.src="https://cdn-icons-png.flaticon.com/512/4140/4140048.png";
+
+back.appendChild(img);
+back.appendChild(document.createTextNode(players[i]));
+
+inner.appendChild(front);
+inner.appendChild(back);
+card.appendChild(inner);
+
+if(i!==0){
+card.onclick=()=>handleGuess(i);
+}
+
+gameArea.appendChild(card);
+}
+
+setTimeout(()=>{
+flipCard(0);
+handleUserRole();
+},300);
+}
+
+function flipCard(index){
+document.querySelectorAll(".inner")[index].classList.add("flipped");
+}
+
+function handleUserRole(){
+let role=players[userIndex];
+
+if(role==="Police"){
+result.innerHTML="You are POLICE. Choose the CHOR.";
+startCountdown(5);
+}
+else if(role==="Chor"){
+result.innerHTML="You are CHOR.";
+countdownDiv.innerHTML="AI Thinking...";
+setTimeout(()=>{
+countdownDiv.innerHTML="";
+aiPoliceTurn();
+},200); // ⚡ Faster AI
+}
+else{
+revealAll();
+assignPoints();
+}
+}
+
+function startCountdown(seconds){
+let time=seconds;
+countdownDiv.innerHTML="Time Left: "+time;
+
+countdownInterval=setInterval(()=>{
+time--;
+countdownDiv.innerHTML="Time Left: "+time;
+
+if(time<=0){
+clearInterval(countdownInterval);
+revealAll();
+assignPoints(-1);
+}
+},1000);
+}
+
+function handleGuess(index){
+if(!gameActive) return;
+clearInterval(countdownInterval);
+flipCard(index);
+revealAll();
+assignPoints(index);
+}
+
+function aiPoliceTurn(){
+let guess=Math.floor(Math.random()*3)+1;
+flipCard(guess);
+revealAll();
+assignPoints(guess);
+}
+
+function revealAll(){
+document.querySelectorAll(".inner").forEach(card=>{
+card.classList.add("flipped");
+});
+}
+
+function assignPoints(guessedIndex=null){
+gameActive=false;
+
+let chorIndex=players.indexOf("Chor");
+let policeIndex=players.indexOf("Police");
+let rajaIndex=players.indexOf("Raja");
+let raniIndex=players.indexOf("Rani");
+
+let scores=[0,0,0,0];
+
+// Fixed royal scores
+scores[rajaIndex]=1000;
+scores[raniIndex]=500;
+
+// Police vs Chor scoring
+if(guessedIndex===chorIndex){
+scores[policeIndex]=100;
+scores[chorIndex]=0;
+}else{
+scores[policeIndex]=0;
+scores[chorIndex]=100;
+}
+
+// Calm end sound
+playEndMusic();
+
+displayScores(scores);
+restartBtn.style.display="inline-block";
+}
+
+function displayScores(scores){
+scoreBoard.innerHTML="<h3>Round Scores</h3>";
+for(let i=0;i<4;i++){
+let name=(i===0)?playerName:"AI "+i;
+scoreBoard.innerHTML+=`${name}: ${scores[i]}<br>`;
+}
+}
+
+function playEndMusic(){
+let osc=audioCtx.createOscillator();
+let gain=audioCtx.createGain();
+
+osc.type="sine";
+osc.frequency.setValueAtTime(440,audioCtx.currentTime);
+osc.frequency.linearRampToValueAtTime(660,audioCtx.currentTime+0.5);
+osc.frequency.linearRampToValueAtTime(550,audioCtx.currentTime+1);
+
+gain.gain.setValueAtTime(0.2,audioCtx.currentTime);
+gain.gain.linearRampToValueAtTime(0,audioCtx.currentTime+1.2);
+
+osc.connect(gain);
+gain.connect(audioCtx.destination);
+osc.start();
+osc.stop(audioCtx.currentTime+1.2);
+}
+</script>
+
+</body>
+</html>

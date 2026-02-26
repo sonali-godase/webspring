@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lava Survival Arena</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;900&display=swap" rel="stylesheet">
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Orbitron',sans-serif}
+
+body{
+background:radial-gradient(circle,#200000,#000);
+color:white;
+text-align:center;
+overflow:hidden;
+}
+
+h1{
+margin-top:20px;
+color:#ff2e63;
+text-shadow:0 0 20px #ff2e63;
+}
+
+button{
+padding:10px 25px;
+border:none;
+border-radius:20px;
+background:#ff2e63;
+color:white;
+cursor:pointer;
+margin-top:15px;
+transition:0.3s;
+}
+button:hover{
+background:#ff004c;
+box-shadow:0 0 15px #ff2e63;
+}
+
+input{
+padding:8px;
+border-radius:10px;
+border:none;
+margin-top:10px;
+}
+
+#intro{
+position:fixed;
+inset:0;
+background:black;
+display:flex;
+flex-direction:column;
+justify-content:center;
+align-items:center;
+z-index:10;
+}
+
+.game-container{
+display:grid;
+grid-template-columns:repeat(3,110px);
+gap:12px;
+justify-content:center;
+margin-top:20px;
+}
+
+.tile{
+width:110px;
+height:110px;
+background:#111;
+border:2px solid #ff2e63;
+border-radius:10px;
+cursor:pointer;
+transition:0.3s;
+}
+.tile:hover{
+transform:scale(1.1);
+box-shadow:0 0 20px #ff2e63;
+}
+
+.safe{
+background:#08d9d6 !important;
+box-shadow:0 0 30px #08d9d6;
+}
+
+.danger{
+background:red !important;
+animation:fire 0.3s infinite;
+}
+
+@keyframes fire{
+0%{box-shadow:0 0 10px red}
+50%{box-shadow:0 0 30px orange}
+100%{box-shadow:0 0 10px red}
+}
+
+.shake{animation:shake 0.4s;}
+@keyframes shake{
+0%{transform:translateX(0)}
+25%{transform:translateX(-8px)}
+50%{transform:translateX(8px)}
+75%{transform:translateX(-8px)}
+100%{transform:translateX(0)}
+}
+
+#timer{
+margin-top:10px;
+font-size:1.2rem;
+color:#ff4444;
+}
+
+#eliminated{
+position:fixed;
+top:40%;
+left:50%;
+transform:translate(-50%,-50%) scale(0);
+font-size:3rem;
+color:red;
+text-shadow:0 0 30px red;
+transition:0.4s;
+}
+
+#leaderboard{
+margin-top:20px;
+max-width:300px;
+margin-inline:auto;
+}
+.leader-item{
+display:flex;
+justify-content:space-between;
+padding:5px;
+border-bottom:1px solid #333;
+}
+</style>
+</head>
+
+<body>
+
+<div id="intro">
+<h1>LAVA SURVIVAL ARENA</h1>
+<input type="text" id="playerName" placeholder="Enter Your Name">
+<button onclick="startGame()">Start Game</button>
+</div>
+
+<h2 id="scoreBoard">Score: 0 | Round: 1</h2>
+<div id="timer"></div>
+
+<div class="game-container" id="grid"></div>
+
+<button id="restartBtn" onclick="restartGame()" style="display:none;">Restart Game</button>
+
+<div id="eliminated">ELIMINATED</div>
+
+<div id="leaderboard">
+<h3>🏆 Leaderboard</h3>
+<div id="leaders"></div>
+</div>
+
+<script>
+let score=0;
+let round=1;
+let safeTiles=[];
+let gameActive=false;
+let timeLeft=3;
+let timerInterval;
+let leaders=[];
+let audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+const grid=document.getElementById("grid");
+const scoreBoard=document.getElementById("scoreBoard");
+const timerDisplay=document.getElementById("timer");
+const eliminated=document.getElementById("eliminated");
+const leadersDiv=document.getElementById("leaders");
+const intro=document.getElementById("intro");
+const restartBtn=document.getElementById("restartBtn");
+
+function startGame(){
+let name=document.getElementById("playerName").value.trim();
+if(name===""){alert("Enter name first!");return;}
+
+audioCtx.resume();
+intro.style.display="none";
+restartBtn.style.display="none";
+score=0;
+round=1;
+gameActive=true;
+eliminated.style.transform="translate(-50%,-50%) scale(0)";
+updateScore();
+nextRound();
+}
+
+function restartGame(){
+restartBtn.style.display="none";
+score=0;
+round=1;
+updateScore();
+gameActive=true;
+eliminated.style.transform="translate(-50%,-50%) scale(0)";
+nextRound();
+}
+
+function createGrid(){
+grid.innerHTML="";
+for(let i=0;i<9;i++){
+let tile=document.createElement("div");
+tile.className="tile";
+tile.dataset.index=i;
+tile.addEventListener("click",tileClick);
+grid.appendChild(tile);
+}
+}
+
+function nextRound(){
+if(!gameActive)return;
+
+createGrid();
+safeTiles=[];
+
+// 🔥 6 SAFE tiles now
+while(safeTiles.length<6){
+let r=Math.floor(Math.random()*9);
+if(!safeTiles.includes(r)) safeTiles.push(r);
+}
+
+startTimer();
+}
+
+function startTimer(){
+timeLeft=3;
+timerDisplay.textContent="Time Left: "+timeLeft+"s";
+clearInterval(timerInterval);
+
+timerInterval=setInterval(()=>{
+playTickSound();
+timeLeft--;
+timerDisplay.textContent="Time Left: "+timeLeft+"s";
+
+if(timeLeft<=0){
+clearInterval(timerInterval);
+playEliminationSound();
+revealBoard();
+setTimeout(gameOver,800);
+}
+},1000);
+}
+
+function tileClick(e){
+if(!gameActive)return;
+clearInterval(timerInterval);
+
+let tile=e.target;
+let index=parseInt(tile.dataset.index);
+
+if(safeTiles.includes(index)){
+tile.classList.add("safe");
+playSafeSound();
+score+=50; // balanced scoring
+round++;
+updateScore();
+setTimeout(nextRound,600);
+}else{
+tile.classList.add("danger");
+playEliminationSound();
+revealBoard();
+setTimeout(gameOver,900);
+}
+}
+
+function revealBoard(){
+let tiles=document.querySelectorAll(".tile");
+tiles.forEach((t,i)=>{
+if(safeTiles.includes(i)){
+t.classList.add("safe");
+}else{
+t.classList.add("danger");
+}
+});
+}
+
+function updateScore(){
+scoreBoard.textContent=`Score: ${score} | Round: ${round}`;
+}
+
+function gameOver(){
+gameActive=false;
+document.body.classList.add("shake");
+eliminated.style.transform="translate(-50%,-50%) scale(1)";
+restartBtn.style.display="inline-block";
+saveLeader();
+}
+
+function saveLeader(){
+let name=document.getElementById("playerName").value;
+leaders.push({name,score});
+leaders.sort((a,b)=>b.score-a.score);
+leaders=leaders.slice(0,5);
+displayLeaders();
+}
+
+function displayLeaders(){
+leadersDiv.innerHTML="";
+leaders.forEach((p,i)=>{
+let div=document.createElement("div");
+div.classList.add("leader-item");
+div.innerHTML=`<span>${i+1}. ${p.name}</span><span>${p.score}</span>`;
+leadersDiv.appendChild(div);
+});
+}
+
+/* AUDIO */
+
+function playSafeSound(){
+let osc=audioCtx.createOscillator();
+let gain=audioCtx.createGain();
+osc.type="triangle";
+osc.frequency.setValueAtTime(600,audioCtx.currentTime);
+osc.frequency.exponentialRampToValueAtTime(1000,audioCtx.currentTime+0.2);
+gain.gain.setValueAtTime(0.2,audioCtx.currentTime);
+osc.connect(gain);
+gain.connect(audioCtx.destination);
+osc.start();
+osc.stop(audioCtx.currentTime+0.3);
+}
+
+function playEliminationSound(){
+let osc=audioCtx.createOscillator();
+let gain=audioCtx.createGain();
+osc.type="sawtooth";
+osc.frequency.setValueAtTime(200,audioCtx.currentTime);
+osc.frequency.exponentialRampToValueAtTime(60,audioCtx.currentTime+0.6);
+gain.gain.setValueAtTime(0.3,audioCtx.currentTime);
+osc.connect(gain);
+gain.connect(audioCtx.destination);
+osc.start();
+osc.stop(audioCtx.currentTime+0.6);
+}
+
+function playTickSound(){
+let osc=audioCtx.createOscillator();
+let gain=audioCtx.createGain();
+osc.type="square";
+osc.frequency.value=800;
+gain.gain.value=0.05;
+osc.connect(gain);
+gain.connect(audioCtx.destination);
+osc.start();
+osc.stop(audioCtx.currentTime+0.05);
+}
+</script>
+
+</body>
+</html>

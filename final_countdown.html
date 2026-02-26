@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Final Countdown Survival</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600&display=swap" rel="stylesheet">
+
+<style>
+
+body{
+margin:0;
+font-family:Orbitron;
+background:radial-gradient(circle,#020617,#000);
+color:white;
+text-align:center;
+overflow:hidden;
+}
+
+h1{
+color:#ff0080;
+text-shadow:0 0 20px #ff0080;
+}
+
+#timer{
+font-size:2rem;
+color:red;
+margin-top:10px;
+}
+
+#score{
+font-size:1.4rem;
+color:#00eaff;
+margin-top:5px;
+}
+
+#gameArea{
+position:relative;
+width:100%;
+height:70vh;
+margin-top:20px;
+border-top:2px solid #ff0080;
+}
+
+
+/* normal target */
+.target{
+width:60px;
+height:60px;
+border-radius:50%;
+background:radial-gradient(circle,orange,red);
+position:absolute;
+cursor:pointer;
+box-shadow:0 0 20px red;
+}
+
+
+/* bonus target */
+.bonus{
+background:radial-gradient(circle,gold,orange);
+box-shadow:0 0 30px gold;
+}
+
+
+/* slow bubble */
+.slow{
+width:70px;
+height:70px;
+background:radial-gradient(circle,#00eaff,#0066ff);
+box-shadow:0 0 25px cyan;
+}
+
+
+/* animation */
+.target:hover{
+transform:scale(1.2);
+}
+
+button{
+padding:10px 25px;
+border:none;
+border-radius:20px;
+background:#ff0080;
+color:white;
+cursor:pointer;
+margin-top:15px;
+}
+
+button:hover{
+box-shadow:0 0 20px #ff0080;
+}
+
+#result{
+margin-top:15px;
+font-size:1.5rem;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<h1>FINAL COUNTDOWN</h1>
+
+<div id="timer">Time: 30</div>
+<div id="score">Score: 0</div>
+
+<button onclick="startGame()">START</button>
+
+<div id="gameArea"></div>
+
+<div id="result"></div>
+
+
+<script>
+
+let time=30;
+let score=0;
+let gameRunning=false;
+
+let timerInterval;
+let spawnInterval;
+
+let spawnSpeed=800;
+
+const timerText=document.getElementById("timer");
+const scoreText=document.getElementById("score");
+const gameArea=document.getElementById("gameArea");
+const result=document.getElementById("result");
+
+
+function startGame(){
+
+time=30;
+score=0;
+spawnSpeed=800;
+
+gameRunning=true;
+
+timerText.innerHTML="Time: "+time;
+scoreText.innerHTML="Score: "+score;
+result.innerHTML="";
+gameArea.innerHTML="";
+
+timerInterval=setInterval(updateTimer,1000);
+spawnInterval=setInterval(spawnTarget,spawnSpeed);
+
+}
+
+
+/* timer */
+function updateTimer(){
+
+if(!gameRunning) return;
+
+time--;
+
+if(time <= 0){
+
+time = 0;
+timerText.innerHTML = "Time: 0";
+
+endGame();
+
+return;
+
+}
+
+timerText.innerHTML = "Time: " + time;
+
+}
+
+
+/* spawn targets */
+function spawnTarget(){
+
+if(!gameRunning) return;
+
+let target=document.createElement("div");
+target.className="target";
+
+
+let rand=Math.random();
+
+if(rand<0.15){
+
+target.classList.add("bonus");
+
+target.onclick=()=>{
+
+score+=50; // bonus points
+scoreText.innerHTML="Score: "+score;
+target.remove();
+
+};
+
+}
+else if(rand<0.25){
+
+target.classList.add("slow");
+
+target.onclick=()=>{
+
+activateSlowMotion();
+target.remove();
+
+};
+
+}
+else{
+
+target.onclick=()=>{
+
+score+=10;
+scoreText.innerHTML="Score: "+score;
+target.remove();
+
+};
+
+}
+
+
+target.style.left=
+Math.random()*(window.innerWidth-80)+"px";
+
+target.style.top=
+Math.random()*(gameArea.offsetHeight-80)+"px";
+
+
+gameArea.appendChild(target);
+
+
+setTimeout(()=>{
+
+target.remove();
+
+},1200);
+
+}
+
+
+/* slow motion */
+function activateSlowMotion(){
+
+result.innerHTML="SLOW MOTION ACTIVATED";
+
+clearInterval(timerInterval);
+
+let slowTime=setInterval(()=>{
+
+time--;
+timerText.innerHTML="Time: "+time;
+
+if(time<=0){
+
+clearInterval(slowTime);
+endGame();
+
+}
+
+},2000); // slower timer
+
+setTimeout(()=>{
+
+clearInterval(slowTime);
+
+timerInterval=setInterval(updateTimer,1000);
+
+result.innerHTML="";
+
+},5000);
+
+}
+
+
+/* end game */
+function endGame(){
+
+gameRunning = false;
+
+clearInterval(timerInterval);
+clearInterval(spawnInterval);
+
+document.querySelectorAll(".target")
+.forEach(t => t.remove());
+
+result.innerHTML =
+"GAME OVER<br>Final Score: " + score;
+
+}
+
+</script>
+
+</body>
+</html>
